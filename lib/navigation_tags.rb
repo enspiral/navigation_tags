@@ -7,7 +7,7 @@ module NavigationTags
   desc %{Render a navigation menu. Walks down the directory tree, expanding the tree up to the current page.
 
     *Usage:*
-    <pre><code><r:nav [id="subnav"] [root=\"/products\"] [append_urls=\"/,/about-us/contact\"] [labels=\"/:Home,/about-us/contact:Contact us\"] [depth=\"2\"] [expand_all=\"true\"]/></code></pre> 
+    <pre><code><r:nav [id="subnav"] [root=\"/products\"] [append_urls=\"/,/about-us/contact\"] [labels=\"/:Home,/about-us/contact:Contact us\"] [depth=\"2\"] [expand_all=\"true\"]/></code></pre>
     *Attributes:*
 
     root: defaults to "/", where to start building the navigation from, you can i.e. use "/products" to build a subnav
@@ -31,15 +31,17 @@ module NavigationTags
       root = Page.find_by_path(root_url = tag.attr.delete('root') || "/")
     end
 
+    return '' unless root
+
     raise NavTagError, "No page found at \"#{root_url}\" to build navigation from." if root.class_name.eql?('FileNotFoundPage')
 
     depth = tag.attr.delete('depth') || 1
     ['ids_for_lis', 'ids_for_links', 'expand_all', 'first_set', 'prepend_urls', 'append_urls', 'labels'].each do |prop|
       eval "@#{prop} = tag.attr.delete('#{prop}') || false"
     end
-    
+
     lis = []
-    
+
     if @prepend_urls
       @prepend_urls.split(",").compact.each do |url|
         page = Page.find_by_path(url)
@@ -52,7 +54,7 @@ module NavigationTags
     for child in root.children
       lis << tag.render('sub-nav', {:page => child, :depth => depth.to_i - 1, :first_set => @first_set })
     end
-    
+
     if @append_urls
       @append_urls.split(",").compact.each do |url|
         page = Page.find_by_path(url)
@@ -81,12 +83,12 @@ module NavigationTags
     depth = tag.attr.delete(:depth)
     @first_set ||= tag.attr.delete(:first_set)
     return if depth.to_i < 0 or child_page.virtual? or !child_page.published? or child_page.class_name.eql? "FileNotFoundPage" or child_page.part("no-map")
-    
+
     r = %{<li#{li_attrs_for_current_page_vs_navigation_item(current_page, child_page)}>
       #{link_for_page(child_page)}\n}
       # mind the open li
     rr = ""
-    if child_page.children.size > 0 and 
+    if child_page.children.size > 0 and
         depth.to_i > 0 and
         child_page.class_name != 'ArchivePage' and
         (@expand_all || current_page.url.starts_with?(child_page.url) )
@@ -94,7 +96,7 @@ module NavigationTags
       child_page.children.each do |child|
         rr << tag.render('sub-nav', :page => child, :depth => depth.to_i - 1, :first_set => @first_set ) unless child.part("no-map") || !child.published?
       end
-      
+
       r << "<ul>\n" + rr + "</ul>\n" unless rr.empty?
     end
     r << "</li>\n"
@@ -106,7 +108,7 @@ module NavigationTags
     classes << "has_children" if child_page.children.size > 0
     classes << "parent_of_current" if !child_page.parent.nil? and current_page.url.starts_with?(child_page.url) and current_page != child_page
     (classes << "first" && @first_set = true) unless @first_set
-    
+
     result = ""
     if classes.any?
       result = " class=\"#{classes.compact.join(" ")}\""
@@ -116,11 +118,11 @@ module NavigationTags
     end
     result
   end
-  
+
   def li_for_current_page_vs_navigation_item current_page, child_page
     "<li#{li_attrs_for_current_page_vs_navigation_item(current_page, child_page)}>#{link_for_page(child_page)}</li>"
   end
-  
+
   def link_for_page page
     if @ids_for_links
       "<a href=\"#{page.path}\" id=\"#{("link_" + (page.slug == "/" ? 'home' : page.slug))}\">#{label_for_page(page)}</a>"
@@ -128,7 +130,7 @@ module NavigationTags
       "<a href=\"#{page.path}\">#{label_for_page(page)}</a>"
     end
   end
-  
+
   def label_for_page page
     # labels="/:Home,/portfolio:Our work"
     if @labels && matched_label = @labels.split(',').select{|l| l.split(':').first == page.path}.first.try(:split, ':').try(:last)
